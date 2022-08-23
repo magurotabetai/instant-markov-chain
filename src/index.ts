@@ -1,7 +1,6 @@
-const endOfLine = Symbol();
-type word = string | typeof endOfLine;
+type word = string | null;
 
-const parentWords: ParentWord[] = [];
+let parentWords: ParentWord[] = [];
 
 interface ParentWord {
   word: string;
@@ -9,8 +8,7 @@ interface ParentWord {
 }
 
 interface ChildWord {
-  word: string;
-  // percentage: number;
+  word: word;
   count: number;
 }
 
@@ -19,8 +17,8 @@ const randomArray = (array: any[]) => {
   return array[index];
 }
 
-const generateRandomTable = (childWords: ChildWord[]): string[] => {
-  const randomTable: string[] = [];
+const generateRandomTable = (childWords: ChildWord[]): word[] => {
+  const randomTable: word[] = [];
   childWords.forEach(childWord => {
     const i = childWord.count;
     const additionalTable = [...Array(i)].map(() => childWord.word);
@@ -30,7 +28,7 @@ const generateRandomTable = (childWords: ChildWord[]): string[] => {
   return randomTable;
 }
 
-const add = (word: string, nextWord: string) => {
+const add = (word: string, nextWord: word) => {
   const targetWord = parentWords.find(ParentWord => ParentWord.word === word);
   if (targetWord) {
     const targetChildWord = targetWord.childWords.find(childWord => childWord.word === nextWord);
@@ -57,7 +55,7 @@ const generateNextWord = (word): word => {
     return randomArray(randomTable);
   }
 
-  return endOfLine;
+  return null;
 }
 
 const generateSentence = (): string => {
@@ -65,30 +63,59 @@ const generateSentence = (): string => {
   let sentence = '';
   let countStop = 0;
 
-  while (typeof currentWord === String) {
+  while (currentWord !== null) {
+    if (countStop > 100) break;
+    countStop++;
     const nextWord = generateNextWord(currentWord);
     currentWord = nextWord;
-    console.log('currentWord :>> ', currentWord);
 
-    if (currentWord !== typeof endOfLine) sentence = sentence.concat(currentWord);
+    if (currentWord !== null) sentence = sentence.concat(currentWord);
   }
 
   return sentence;
 }
 
+const registerParentWords = (sentence: any[]) => {
+  sentence.reduce((word, nextWord) => add(word, nextWord), "");
+
+  const last = sentence.slice(-1)[0]
+  add(last, null);
+}
+
+const splitSentence = (text: string): string[] => text.split("\n");
+
+const outputResult = (text) => {
+  const resultChildElement = document.createElement('div');
+  resultChildElement.innerText = text;
+
+  const resultElement = document.querySelector('#result');
+  resultElement?.appendChild(resultChildElement);
+};
+
 import('kuromoji').then((kuromoji) => {
   const analyze = () => {
-    kuromoji.builder({ dicPath: "https://cdn.jsdelivr.net/npm/kuromoji@0.1.2/dict/" }).build(function (error, tokenizer) {
-      const path = tokenizer.tokenize("TypeScriptは、JavaScriptを拡張した言語です。拡張といっても、むやみに機能を足すのではなく、追加するのは型の世界に限ってです。こういった思想がTypeScriptにはあるため、型に関する部分を除けば、JavaScriptの文法から離れすぎない言語になっています。");
-      const sentence = path.map(token => token.surface_form);
-      sentence.reduce((word, nextWord) => add(word, nextWord), "");
-      console.log(parentWords);
+    const resultElement = document.querySelector('#result');
+    if (resultElement) resultElement.innerHTML = '';
 
-      const generatedSentence = generateSentence();
-      console.log(generatedSentence);
+    parentWords = [];
+
+    kuromoji.builder({ dicPath: "https://cdn.jsdelivr.net/npm/kuromoji@0.1.2/dict/" }).build((_error, tokenizer) => {
+      const textarea: HTMLInputElement = <HTMLInputElement>document.querySelector('#text');
+      const sentences = splitSentence(textarea.value)
+
+      sentences.forEach((text) => {
+        const path = tokenizer.tokenize(text);
+        const sentence = path.map(token => token.surface_form);
+        registerParentWords(sentence);
+      });
+
+      for(let i=0; i < 10; i++){
+        const generatedSentence = generateSentence();
+        outputResult(generatedSentence);
+      }
+
     });
   };
 
   document.querySelector('#analyze')?.addEventListener('click', analyze);
 });
-// import('kuromoji/dict').then(a => console.log(a));

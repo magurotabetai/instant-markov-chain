@@ -2,10 +2,10 @@
   "name": "instant-markov-chain",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
   "source": "src/index.html",
   "scripts": {
     "start": "parcel",
+    "build": "rm -rf docs && parcel build --dist-dir docs --public-url ./",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
